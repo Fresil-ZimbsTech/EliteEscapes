@@ -18,4 +18,8 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\EliteEscapes.Domain\EliteEscapes.Domain.csproj" />
+  </ItemGroup>
+
 </Project>
