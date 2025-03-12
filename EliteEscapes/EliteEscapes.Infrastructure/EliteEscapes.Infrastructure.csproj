@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EliteEscapes.Domain\EliteEscapes.Domain.csproj" />
+    <ProjectReference Include="..\EliteEscapes.Application\EliteEscapes.Application.csproj" />
   </ItemGroup>
 
 </Project>
