@@ -1,4 +1,5 @@
-﻿using EliteEscapes.Domain.Entities;
+﻿using EliteEscapes.Application.Common.Interfaces;
+using EliteEscapes.Domain.Entities;
 using EliteEscapes.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,15 +7,17 @@ namespace EliteEscapes.Web.Controllers
 {
     public class VillaController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public VillaController(ApplicationDbContext context)
+        public VillaController(IUnitOfWork unitOfWork,IWebHostEnvironment webHostEnvironment)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
+            _webHostEnvironment = webHostEnvironment;
         }
         public IActionResult Index()
         {
-            var Villas = _context.Villas.ToList();
+            var Villas = _unitOfWork.Villa.GetAll();
             return View(Villas);
         }
         public IActionResult Create()
@@ -30,8 +33,23 @@ namespace EliteEscapes.Web.Controllers
             }
             if (ModelState.IsValid)
             {
-                _context.Villas.Add(obj);
-                _context.SaveChanges();
+                if(obj.Image != null)
+                {
+                    string fileName = Guid.NewGuid().ToString()+ Path.GetExtension(obj.Image.FileName);
+                    string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, @"images\VillaImage");
+
+                    using var fileStream = new FileStream(Path.Combine(imagePath, fileName), FileMode.Create);
+                    obj.Image.CopyTo(fileStream);
+                    
+                    obj.ImageUrl = @"\images\VillaImages\"+ fileName;
+                }
+                else
+                {
+                    obj.ImageUrl = "https://placehold.co/600x400";
+                }
+
+                    _unitOfWork.Villa.Add(obj);
+                _unitOfWork.Save();
                 TempData["success"] = "Villa Created Successfully";
                 return RedirectToAction("Index");
             }
@@ -40,7 +58,7 @@ namespace EliteEscapes.Web.Controllers
 
         public IActionResult Update(int villaId)
         {
-            var obj = _context.Villas.FirstOrDefault(v => v.Id == villaId);
+            var obj = _unitOfWork.Villa.Get(v => v.Id == villaId);
             if (obj == null)
             {
                 return RedirectToAction("Error","Home");
@@ -53,8 +71,29 @@ namespace EliteEscapes.Web.Controllers
         {
             if(ModelState.IsValid)
             {
-                _context.Villas.Update(obj);
-                _context.SaveChanges();
+                if (obj.Image != null)
+                {
+                    string fileName = Guid.NewGuid().ToString() + Path.GetExtension(obj.Image.FileName);
+                    string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, @"images\VillaImage");
+
+                    if(!string.IsNullOrEmpty(obj.ImageUrl))
+                    {
+                        var oldImagepath = Path.Combine(_webHostEnvironment.WebRootPath, obj.ImageUrl.TrimStart('\\'));
+                        if (System.IO.File.Exists(oldImagepath))
+                        {
+                            System.IO.File.Delete(oldImagepath);
+                        }
+                    }
+
+                    using var fileStream = new FileStream(Path.Combine(imagePath, fileName), FileMode.Create);
+                    obj.Image.CopyTo(fileStream);
+
+                    obj.ImageUrl = @"\images\VillaImages\" + fileName;
+                }
+                
+
+                _unitOfWork.Villa.Update(obj);
+                _unitOfWork.Save();
                 TempData["success"] = "Villa Updated Successfully";
                 return RedirectToAction("Index");
             }
@@ -64,7 +103,7 @@ namespace EliteEscapes.Web.Controllers
 
         public IActionResult Delete(int villaId)
         {
-            var obj = _context.Villas.FirstOrDefault(v => v.Id == villaId);
+            var obj = _unitOfWork.Villa.Get(v => v.Id == villaId);
             if (obj == null)
             {
                 return RedirectToAction("Error", "Home");
@@ -75,15 +114,15 @@ namespace EliteEscapes.Web.Controllers
         [HttpPost]
         public IActionResult Delete(Villa obj)
         {
-           var del = _context.Villas.FirstOrDefault(v => v.Id == obj.Id);
+           var del = _unitOfWork.Villa.Get(v => v.Id == obj.Id);
             if (del == null)
             {
                 TempData["error"] = "Villa Not Deleted Successfully";
                 return RedirectToAction("Error", "Home");
                 
             }
-            _context.Villas.Remove(del);
-            _context.SaveChanges();
+            _unitOfWork.Villa.Remove(del);
+            _unitOfWork.Save();
             TempData["success"] = "Villa Deleted Successfully";
            
             return RedirectToAction("Index");
