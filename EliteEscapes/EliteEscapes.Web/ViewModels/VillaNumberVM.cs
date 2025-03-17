@@ -6,6 +6,7 @@ namespace EliteEscapes.Web.ViewModels
 {
     public class VillaNumberVM
     {
+        //dropdown list for villa number`
         public VillaNumber? VillaNumber { get; set; }
         [ValidateNever]
         public IEnumerable<SelectListItem>? VillaList { get; set; }  

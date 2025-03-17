@@ -41,7 +41,7 @@ namespace EliteEscapes.Web.Controllers
                     using var fileStream = new FileStream(Path.Combine(imagePath, fileName), FileMode.Create);
                     obj.Image.CopyTo(fileStream);
                     
-                    obj.ImageUrl = @"\images\VillaImages\"+ fileName;
+                    obj.ImageUrl = @"\images\VillaImage\"+ fileName;
                 }
                 else
                 {
@@ -69,26 +69,19 @@ namespace EliteEscapes.Web.Controllers
         [HttpPost]
         public IActionResult Update(Villa obj)
         {
-            if(ModelState.IsValid)
+            if(ModelState.IsValid && obj.Id > 0)
             {
                 if (obj.Image != null)
                 {
                     string fileName = Guid.NewGuid().ToString() + Path.GetExtension(obj.Image.FileName);
                     string imagePath = Path.Combine(_webHostEnvironment.WebRootPath, @"images\VillaImage");
 
-                    if(!string.IsNullOrEmpty(obj.ImageUrl))
-                    {
-                        var oldImagepath = Path.Combine(_webHostEnvironment.WebRootPath, obj.ImageUrl.TrimStart('\\'));
-                        if (System.IO.File.Exists(oldImagepath))
-                        {
-                            System.IO.File.Delete(oldImagepath);
-                        }
-                    }
+                    
 
                     using var fileStream = new FileStream(Path.Combine(imagePath, fileName), FileMode.Create);
                     obj.Image.CopyTo(fileStream);
 
-                    obj.ImageUrl = @"\images\VillaImages\" + fileName;
+                    obj.ImageUrl = @"\images\VillaImage\" + fileName;
                 }
                 
 
@@ -103,6 +96,7 @@ namespace EliteEscapes.Web.Controllers
 
         public IActionResult Delete(int villaId)
         {
+            
             var obj = _unitOfWork.Villa.Get(v => v.Id == villaId);
             if (obj == null)
             {
@@ -117,9 +111,19 @@ namespace EliteEscapes.Web.Controllers
            var del = _unitOfWork.Villa.Get(v => v.Id == obj.Id);
             if (del == null)
             {
+
                 TempData["error"] = "Villa Not Deleted Successfully";
                 return RedirectToAction("Error", "Home");
                 
+            }
+            if (!string.IsNullOrEmpty(del.ImageUrl))
+            {
+                var oldImagepath = Path.Combine(_webHostEnvironment.WebRootPath, del.ImageUrl.TrimStart('\\'));
+
+                if (System.IO.File.Exists(oldImagepath))
+                {
+                    System.IO.File.Delete(oldImagepath);
+                }
             }
             _unitOfWork.Villa.Remove(del);
             _unitOfWork.Save();
