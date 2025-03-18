@@ -1,10 +1,12 @@
 ﻿using EliteEscapes.Application.Common.Interfaces;
 using EliteEscapes.Domain.Entities;
 using EliteEscapes.Infrastructure.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EliteEscapes.Web.Controllers
 {
+    [Authorize]
     public class VillaController : Controller
     {
         private readonly IUnitOfWork _unitOfWork;

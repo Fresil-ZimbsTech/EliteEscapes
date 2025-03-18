@@ -72,12 +72,12 @@ namespace EliteEscapes.Application.Services.Implementation
 
         public IEnumerable<Villa> GetAllVillas()
         {
-            throw new NotImplementedException();
+            return _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity");
         }
 
         public Villa GetVillaById(int id)
         {
-            throw new NotImplementedException();
+            return _unitOfWork.Villa.Get(u => u.Id == id, includeProperties: "VillaAmenity");
         }
 
         public IEnumerable<Villa> GetVillasAvailabilityByDate(int nights, DateOnly checkInDate)
