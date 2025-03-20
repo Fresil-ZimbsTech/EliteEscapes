@@ -119,7 +119,7 @@ namespace EliteEscapes.Web.Controllers
 
         [HttpGet]
         [Authorize]
-        public IActionResult GetAll()
+        public IActionResult GetAll(string status)
         {
             IEnumerable<Booking> objBookings;
 
@@ -133,7 +133,19 @@ namespace EliteEscapes.Web.Controllers
                 var userId = claimIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
                 objBookings = _unitOfWork.Booking.GetAll(x => x.UserId == userId, includeProperties: "User,Villa");
             }
+
+            if(!string.IsNullOrEmpty(status))
+            {
+                objBookings = objBookings.Where(x => x.Status.ToLower().Equals(status.ToLower()));
+            }
             return Json(new { data = objBookings });
+        }
+
+        [Authorize]
+        public IActionResult BookingDetails(int bookingId)
+        {
+            Booking bookingFromDb = _unitOfWork.Booking.Get(x => x.Id == bookingId, includeProperties: "User,Villa");
+            return View(bookingFromDb);
         }
 
     }
