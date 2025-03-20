@@ -16,14 +16,14 @@ namespace EliteEscapes.Web.Controllers
         {
             _unitOfWork = unitOfWork;
         }
-
+        [Authorize]
         public IActionResult Index()
         {
             return View();
         }
 
         [Authorize]
-        public IActionResult FinalizeBooking(int villaId,DateOnly checkInDate, int nights)
+        public IActionResult FinalizeBooking(int villaId, DateOnly checkInDate, int nights)
         {
 
             var cliamIdentity = (ClaimsIdentity)User.Identity;
@@ -31,13 +31,13 @@ namespace EliteEscapes.Web.Controllers
 
             ApplicationUser user = _unitOfWork.User.Get(x => x.Id == userId);
 
-            Booking booking = new ()
+            Booking booking = new()
             {
                 VillaId = villaId,
                 CheckInDate = checkInDate,
                 Nights = nights,
                 CheckOutDate = checkInDate.AddDays(nights),
-                Villa= _unitOfWork.Villa.Get(x=> x.Id == villaId, includeProperties: "VillaAmenity"),
+                Villa = _unitOfWork.Villa.Get(x => x.Id == villaId, includeProperties: "VillaAmenity"),
                 UserId = userId,
                 Phone = user.PhoneNumber,
                 Email = user.Email,
@@ -51,8 +51,8 @@ namespace EliteEscapes.Web.Controllers
         [HttpPost]
         public IActionResult FinalizeBooking(Booking booking)
         {
-            var villa = _unitOfWork.Villa.Get(x=>x.Id == booking.VillaId);
-            booking.TotalCost= villa.Price * booking.Nights;
+            var villa = _unitOfWork.Villa.Get(x => x.Id == booking.VillaId);
+            booking.TotalCost = villa.Price * booking.Nights;
             booking.Status = SD.StatusPending;
             booking.BookingDate = DateTime.Now;
             _unitOfWork.Booking.Add(booking);
@@ -116,5 +116,25 @@ namespace EliteEscapes.Web.Controllers
             }
             return View(bookingId);
         }
+
+        [HttpGet]
+        [Authorize]
+        public IActionResult GetAll()
+        {
+            IEnumerable<Booking> objBookings;
+
+            if (User.IsInRole(SD.Role_Admin))
+            {
+                objBookings = _unitOfWork.Booking.GetAll(includeProperties: "User,Villa");
+            }
+            else
+            {
+                var claimIdentity = (ClaimsIdentity)User.Identity;
+                var userId = claimIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
+                objBookings = _unitOfWork.Booking.GetAll(x => x.UserId == userId, includeProperties: "User,Villa");
+            }
+            return Json(new { data = objBookings });
+        }
+
     }
 }
