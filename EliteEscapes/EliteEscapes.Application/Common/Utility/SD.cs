@@ -22,14 +22,13 @@ namespace EliteEscapes.Application.Common.Utility
         public static int VillaRoomsAvailable_Count(int villaId, List<VillaNumber> villaNumberList, DateOnly checkInDate, int nights, List<Booking> bookings)
         {
             List<int> bookingInDate = new();
-            
 
+            int finalAvailableRoomForAllNights = int.MaxValue;
             var roomsInVilla = villaNumberList.Where(x => x.VillaId == villaId).Count();
 
             for (int i = 0; i < nights; i++)
             {
                 var villasBooked = bookings.Where(f => f.CheckInDate <= checkInDate.AddDays(i) && f.CheckOutDate > checkInDate.AddDays(i) && f.VillaId == villaId);
-
                 foreach (var booking in villasBooked)
                 {
                     if (!bookingInDate.Contains(booking.Id))
@@ -37,18 +36,21 @@ namespace EliteEscapes.Application.Common.Utility
                         bookingInDate.Add(booking.Id);
                     }
                 }
+                var totalAvailableRooms = roomsInVilla - bookingInDate.Count;
+                if (totalAvailableRooms == 0)
+                {
+                    return 0;
+                }
+                else
+                {
+                    if (finalAvailableRoomForAllNights > totalAvailableRooms)
+                    {
+                        finalAvailableRoomForAllNights = totalAvailableRooms;
+                    }
+                }
 
             }
-
-            var totalAvailableRooms = roomsInVilla - bookingInDate.Count;
-            if (totalAvailableRooms == 0)
-            {
-                return 0;
-            }
-            else
-            {
-                return totalAvailableRooms;
-            }
+            return finalAvailableRoomForAllNights;
         }
 
     }

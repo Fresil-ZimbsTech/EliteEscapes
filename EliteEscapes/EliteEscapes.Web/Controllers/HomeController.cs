@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using EliteEscapes.Web.Models;
 using EliteEscapes.Application.Common.Interfaces;
 using EliteEscapes.Web.ViewModels;
+using EliteEscapes.Application.Common.Utility;
+using EliteEscapes.Domain.Entities;
 
 namespace EliteEscapes.Web.Controllers;
 
@@ -32,12 +34,14 @@ public class HomeController : Controller
     public IActionResult GetVillasByDate(int nights, DateOnly checkInDate)
     {
         var villaList = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity").ToList();
+        var villNumberList = _unitOfWork.VillaNumber.GetAll().ToList();
+        var bookedVilla = _unitOfWork.Booking.GetAll(x => x.Status == SD.StatusApproved || x.Status == SD.StatusCheckedIn).ToList();
+
         foreach (var villa in villaList)
         {
-            if (villa.Id % 2 == 0)
-            {
-                villa.IsAvailable = false;
-            }
+            int roomAvailable = SD.VillaRoomsAvailable_Count(villa.Id, villNumberList, checkInDate, nights, bookedVilla);
+
+            villa.IsAvailable = roomAvailable > 0 ? true : false;
         }
         HomeVM homeVM = new()
         {
