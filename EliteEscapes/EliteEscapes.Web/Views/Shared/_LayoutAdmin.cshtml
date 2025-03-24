@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css" integrity="sha512-3pIirOrwegjM6erE5gPSwkUzO+3cTjpnV9lexlNZqvupR64iZBnOOTiiLPb9M36zpMScbmUNIcHUqKD47M719g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="~/css/spinner.css" />
     <link rel="stylesheet" href="//cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="~/css/apexcharts.css" />
 </head>
 <body>
     <header>
@@ -55,7 +56,7 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" asp-controller="VillaNumber" asp-action="Index">
-                                <span class="me-2"><i class="bi bi-list-ol"></i></i></span>
+                                <span class="me-2"><i class="bi bi-list-ol"></i></span>
                                 <span>VillaNumber</span>
                             </a>
                         </li>
@@ -95,6 +96,7 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="//cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js" asp-append-version="true"></script>
     @*  <script src="~/js/jquery.unobtrusive-ajax.min.js"></script> *@
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

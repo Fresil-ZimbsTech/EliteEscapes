@@ -28,7 +28,6 @@
     "jquery": ">=1.8"
   },
   "devDependencies": {
-    "eslint": "^9.22.0",
     "gulp": "^4.0.0",
     "gulp-cli": "1.2.2",
     "gulp-line-ending-corrector": "1.0.1",
