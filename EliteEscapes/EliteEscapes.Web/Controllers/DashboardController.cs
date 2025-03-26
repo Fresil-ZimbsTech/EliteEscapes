@@ -1,4 +1,5 @@
-﻿using EliteEscapes.Application.Common.Interfaces;
+﻿using System.Linq;
+using EliteEscapes.Application.Common.Interfaces;
 using EliteEscapes.Application.Common.Utility;
 using EliteEscapes.Web.ViewModels;
 using Microsoft.AspNetCore.Mvc;
@@ -59,7 +60,84 @@ namespace EliteEscapes.Web.Controllers
 
             return Json(GetRadialCartDataModel(totalRevenue, countByCurrentMonth, countByPreviousMonth));
         }
+        public async Task<IActionResult> GetBookingPieChartData()
+        {
+            var totalBookings = _unitOfWork.Booking.GetAll(u => u.BookingDate >= DateTime.Now.AddDays(-30) && (u.Status != SD.StatusPending || u.Status == SD.StatusCancelled));
 
+            var customerWithOneBooking = totalBookings.GroupBy(u=>u.UserId).Where(x=>x.Count()==1).Select(u=>u.Key).ToList();
+
+            int  bookingByNewCustomer = customerWithOneBooking.Count();
+
+            int bookingByReturningCustomer = totalBookings.Count() - bookingByNewCustomer;
+
+            PieChartVM pieChartVM = new()
+            {
+                Labels = new string[] { "New Customer Bookings", "Returning Customer Bookings" },
+                Series = new decimal[] { bookingByNewCustomer, bookingByReturningCustomer }
+            };
+            return Json(pieChartVM);
+        }
+
+        public async Task<IActionResult> GetMemberAndBookingLineChartData()
+        {
+            var bookingData = _unitOfWork.Booking.GetAll(u => u.BookingDate >= DateTime.Now.AddDays(-30) && u.BookingDate.Date <= DateTime.Now)
+                .GroupBy(x => x.BookingDate.Date)
+                .Select(u => new
+                {
+                    DateTime = u.Key,
+                    NewBookingCount = u.Count()
+                });
+
+             var customerData = _unitOfWork.User.GetAll(u => u.CreatedAt >= DateTime.Now.AddDays(-30) && u.CreatedAt.Date <= DateTime.Now)
+                .GroupBy(x => x.CreatedAt.Date)
+                .Select(u => new
+                {
+                    DateTime = u.Key,
+                    NewCustomerCount = u.Count()
+                });
+
+
+            var leftJoin = bookingData.GroupJoin(customerData, booking => booking.DateTime, customer => customer.DateTime,
+                 (booking, customer) => new
+                 {
+                     booking.DateTime,
+                     booking.NewBookingCount,
+                     NewCustomerCount = customer.Select(x => x.NewCustomerCount).FirstOrDefault()
+                 });
+            var rightJoin = customerData.GroupJoin(bookingData, customer => customer.DateTime, booking => booking.DateTime,
+                (customer, booking) => new
+                {
+                    customer.DateTime,
+                    NewBookingCount = booking.Select(x => x.NewBookingCount).FirstOrDefault(),
+                    customer.NewCustomerCount
+                });
+
+            var mergedData = leftJoin.Union(rightJoin).OrderBy(x => x.DateTime).ToList();
+
+            var newBookingData = mergedData.Select(x => x.NewBookingCount).ToArray();
+            var newCustomerData = mergedData.Select(x => x.NewCustomerCount).ToArray();
+            var categories = mergedData.Select(x=>x.DateTime.ToString("MM/dd/yyyy")).ToArray();
+
+            List<ChartData> chartDataList = new()
+            {
+                new ChartData
+                {
+                    Name="New Bookings",
+                    Data=newBookingData,
+                },
+                new ChartData
+                {
+                    Name="New Customers",
+                    Data=newCustomerData,
+                }
+            };
+            LineChartVM lineChartVM = new()
+            {
+                Catagories = categories,
+                Series = chartDataList
+            };
+            return Json(lineChartVM);
+        }
 
         private static RadialBarChartVM GetRadialCartDataModel(int totalCount, double currentMonthCount, double prevMonthCount)
         {
@@ -84,3 +162,4 @@ namespace EliteEscapes.Web.Controllers
     }
 }
 
+ 
