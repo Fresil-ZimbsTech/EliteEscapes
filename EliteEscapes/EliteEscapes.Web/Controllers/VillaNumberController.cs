@@ -1,4 +1,5 @@
 ﻿using EliteEscapes.Application.Common.Interfaces;
+using EliteEscapes.Application.Services.Interface;
 using EliteEscapes.Domain.Entities;
 using EliteEscapes.Infrastructure.Data;
 using EliteEscapes.Web.ViewModels;
@@ -10,22 +11,24 @@ namespace EliteEscapes.Web.Controllers
 {
     public class VillaNumberController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IVillaNumberService _villaNumberService;
+        private readonly IVillaService _villaService;
 
-        public VillaNumberController(IUnitOfWork unitOfWork)
+        public VillaNumberController(IVillaNumberService villaNumberService, IVillaService villaService)
         {
-            _unitOfWork = unitOfWork;
+           _villaNumberService = villaNumberService;
+            _villaService = villaService;
         }
         public IActionResult Index()
         {
-            var VillaNumbers = _unitOfWork.VillaNumber.GetAll(includeProperties: "Villa");
+            var VillaNumbers = _villaNumberService.GetAllVillaNumbers();
             return View(VillaNumbers);
         }
         public IActionResult Create()
         {
             VillaNumberVM villaNumberVM = new()
             {
-                VillaList = _unitOfWork.Villa.GetAll().Select(u => new SelectListItem
+                VillaList = _villaService.GetAllVillas().Select(u => new SelectListItem
                 {
                     Text = u.Name,
                     Value = u.Id.ToString()
@@ -36,12 +39,11 @@ namespace EliteEscapes.Web.Controllers
         [HttpPost]
         public IActionResult Create(VillaNumberVM obj)
         {
-           bool roomNumberExist = _unitOfWork.VillaNumber.Any(u=>u.Villa_Number == obj.VillaNumber.Villa_Number);
+           bool roomNumberExist =  _villaNumberService.CheckVillaNumberExists(obj.VillaNumber.Villa_Number);
 
             if (ModelState.IsValid && !roomNumberExist)
             {
-                _unitOfWork.VillaNumber.Add(obj.VillaNumber);
-                _unitOfWork.Save();
+                _villaNumberService.CreateVillaNumber(obj.VillaNumber);
                 TempData["success"] = "Villa Number  Created Successfully";
                 return RedirectToAction("Index");
             }
@@ -50,7 +52,7 @@ namespace EliteEscapes.Web.Controllers
             {
                 TempData["error"] = "The Villa Number Already Exist";
             }
-            obj.VillaList = _unitOfWork.Villa.GetAll().Select(u => new SelectListItem
+            obj.VillaList = _villaService.GetAllVillas().Select(u => new SelectListItem
             {
                 Text = u.Name,
                 Value = u.Id.ToString()
@@ -62,12 +64,12 @@ namespace EliteEscapes.Web.Controllers
         {
             VillaNumberVM villaNumberVM = new()
             {
-                VillaList = _unitOfWork.Villa.GetAll().Select(u => new SelectListItem
+                VillaList = _villaService.GetAllVillas().Select(u => new SelectListItem
                 {
                     Text = u.Name,
                     Value = u.Id.ToString()
                 }),
-                VillaNumber = _unitOfWork.VillaNumber.Get(v => v.Villa_Number == villaNumberId)
+                VillaNumber = _villaNumberService.GetVillaNumberById(villaNumberId)
             };
             if (villaNumberVM.VillaNumber == null)
             {
@@ -81,12 +83,11 @@ namespace EliteEscapes.Web.Controllers
         {
             if (ModelState.IsValid)
             {
-                _unitOfWork.VillaNumber.Update(villaNumberVM.VillaNumber);
-                _unitOfWork.Save();
+                _villaNumberService.UpdateVillaNumber(villaNumberVM.VillaNumber);               
                 TempData["success"] = "The Villa Number has been updated Successfully";
                 return RedirectToAction("Index");
             }
-            villaNumberVM.VillaList = _unitOfWork.Villa.GetAll().Select(u => new SelectListItem
+            villaNumberVM.VillaList = _villaService.GetAllVillas().Select(u => new SelectListItem
             {
                 Text = u.Name,
                 Value = u.Id.ToString()
@@ -99,12 +100,12 @@ namespace EliteEscapes.Web.Controllers
         {
             VillaNumberVM villaNumberVM = new()
             {
-                VillaList = _unitOfWork.Villa.GetAll().Select(u => new SelectListItem
+                VillaList = _villaService.GetAllVillas().Select(u => new SelectListItem
                 {
                     Text = u.Name,
                     Value = u.Id.ToString()
                 }),
-                VillaNumber = _unitOfWork.VillaNumber.Get(v => v.Villa_Number == villaNumberId)
+                VillaNumber = _villaNumberService.GetVillaNumberById(villaNumberId)
             };
             if (villaNumberVM.VillaNumber == null)
             {
@@ -117,15 +118,14 @@ namespace EliteEscapes.Web.Controllers
         [HttpPost]
         public IActionResult Delete(VillaNumberVM villaNumberVM)
         {
-           VillaNumber? del = _unitOfWork.VillaNumber.Get(v => v.Villa_Number == villaNumberVM.VillaNumber.Villa_Number);
-            if (del == null)
+           VillaNumber? objFromDb = _villaNumberService.GetVillaNumberById(villaNumberVM.VillaNumber.Villa_Number);
+            if (objFromDb == null)
             {
                 TempData["error"] = "Villa Number could Not be Deleted Successfully";
                 return RedirectToAction("Error", "Home");
 
             }
-            _unitOfWork.VillaNumber.Remove(del);
-            _unitOfWork.Save();
+            _villaNumberService.DeleteVillaNumber(objFromDb.Villa_Number);
             TempData["success"] = "Villa Number Deleted Successfully";
             return RedirectToAction("Index");
         }
