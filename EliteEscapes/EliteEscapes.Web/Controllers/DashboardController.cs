@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using EliteEscapes.Application.Common.Interfaces;
 using EliteEscapes.Application.Common.Utility;
-using EliteEscapes.Application.Services.Implementation;
+using EliteEscapes.Application.Services.Interface;
 using EliteEscapes.Web.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,11 +9,11 @@ namespace EliteEscapes.Web.Controllers
 {
     public class DashboardController : Controller
     {
-        private readonly DashboardService _dashboardService;
+        private readonly IDashboardService _dashboardService;
 
-        public DashboardController(DashboardService dashboardService)
+        public DashboardController(IDashboardService dashboardService)
         {
-           _dashboardService = dashboardService;
+            _dashboardService = dashboardService;
         }
         public IActionResult Index()
         {
