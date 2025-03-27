@@ -1,6 +1,6 @@
 ﻿namespace EliteEscapes.Web.ViewModels
 {
-    public class LineChartVM
+    public class LineChartDto
     {
         public List<ChartData> Series { get; set; }
         public string[] Catagories { get; set; }

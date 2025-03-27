@@ -30,7 +30,7 @@ namespace EliteEscapes.Infrastructure.Repository
             return dbSet.Any(filter);
         }
 
-        public T Get(Expression<Func<T, bool>> filter, string? includeProperties = , bool tracked = false)
+        public T Get(Expression<Func<T, bool>> filter, string? includeProperties = null, bool tracked = false)
         {
             IQueryable<T> query;
             if (tracked)
