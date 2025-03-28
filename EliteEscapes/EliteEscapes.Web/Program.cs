@@ -1,8 +1,10 @@
 using EliteEscapes.Application.Common.Interfaces;
+using EliteEscapes.Application.Contract;
 using EliteEscapes.Application.Services.Implementation;
 using EliteEscapes.Application.Services.Interface;
 using EliteEscapes.Domain.Entities;
 using EliteEscapes.Infrastructure.Data;
+using EliteEscapes.Infrastructure.Emails;
 using EliteEscapes.Infrastructure.Repository;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +43,7 @@ builder.Services.AddScoped<IVillaNumberService, VillaNumberService>();
 builder.Services.AddScoped<IAmenityService, AmenityService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 var app = builder.Build();
 
