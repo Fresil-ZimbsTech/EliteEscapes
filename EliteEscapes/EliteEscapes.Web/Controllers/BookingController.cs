@@ -12,6 +12,7 @@ using Syncfusion.Drawing;
 using Syncfusion.Pdf;
 using EliteEscapes.Application.Services.Interface;
 using Microsoft.AspNetCore.Identity;
+using EliteEscapes.Application.Contract;
 
 namespace EliteEscapes.Web.Controllers
 {
@@ -24,8 +25,9 @@ namespace EliteEscapes.Web.Controllers
         private readonly IVillaNumberService _villaNumberService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IPaymentService _paymentService;
+        private readonly IEmailService _emailService;
 
-        public BookingController(IWebHostEnvironment webHostEnvironment,IVillaService villaService,IBookingService bookingService,IVillaNumberService villaNumberService,UserManager<ApplicationUser> userManager,IPaymentService paymentService)
+        public BookingController(IWebHostEnvironment webHostEnvironment,IVillaService villaService,IBookingService bookingService,IVillaNumberService villaNumberService,UserManager<ApplicationUser> userManager,IPaymentService paymentService,IEmailService emailService)
         {
             
             _webHostEnvironment = webHostEnvironment;
@@ -34,6 +36,7 @@ namespace EliteEscapes.Web.Controllers
             _villaNumberService = villaNumberService;
             _userManager = userManager;
             _paymentService = paymentService;
+            _emailService = emailService;
         }
 
         [Authorize]
@@ -120,6 +123,8 @@ namespace EliteEscapes.Web.Controllers
                 {
                     _bookingService.UpdateStatus(bookingFromDb.Id, SD.StatusApproved,0);
                     _bookingService.UpdateStripePaymentID(bookingFromDb.Id, session.Id, session.PaymentIntentId);
+
+                    _emailService.SendEmailAsync(bookingFromDb.Email, "Booking Confirmation - ElliteEscapes", "<p>Your booking has been confirmed. Booking ID - " + bookingFromDb.Id + "</p>");
                  
                 }
             }
