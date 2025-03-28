@@ -62,14 +62,27 @@
 	</footer>
 
 	<script type="text/javascript">
+		// Function to apply the theme based on localStorage
+		function applyTheme() {
+			const savedTheme = localStorage.getItem("themeMode") || "dark"; // Default to dark mode
+			document.documentElement.setAttribute('data-bs-theme', savedTheme);
+			document.getElementById("flexSwitchCheckDefault").checked = (savedTheme === "light");
+		}
+
+		// Apply theme on page load
+		applyTheme();
+
+		// Toggle theme and save the choice in localStorage
 		document.getElementById('btnSwitch').addEventListener('click', () => {
-			if (document.documentElement.getAttribute('data-bs-theme') == 'dark') {
-				document.documentElement.setAttribute('data-bs-theme', 'light')
-			}
-			else {
-				document.documentElement.setAttribute('data-bs-theme', 'dark')
-			}
-		})
+			let currentTheme = document.documentElement.getAttribute('data-bs-theme');
+			let newTheme = (currentTheme === "dark") ? "light" : "dark";
+
+			document.documentElement.setAttribute('data-bs-theme', newTheme);
+			localStorage.setItem("themeMode", newTheme); // Save mode in localStorage
+
+			// Update toggle switch state
+			document.getElementById("flexSwitchCheckDefault").checked = (newTheme === "light");
+		});
 	</script>
 
 	@* jquery-ajax-unobtrusive@3.2.6 *@
