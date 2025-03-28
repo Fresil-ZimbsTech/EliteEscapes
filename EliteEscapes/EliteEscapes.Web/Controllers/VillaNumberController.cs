@@ -114,7 +114,6 @@ namespace EliteEscapes.Web.Controllers
             return View(villaNumberVM);
         }
 
-
         [HttpPost]
         public IActionResult Delete(VillaNumberVM villaNumberVM)
         {
