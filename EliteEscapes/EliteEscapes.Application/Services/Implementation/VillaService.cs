@@ -99,7 +99,13 @@ namespace EliteEscapes.Application.Services.Implementation
 
         public bool IsVillaAvailableByDate(int villaId, int nights, DateOnly checkInDate)
         {
-            throw new NotImplementedException();
+            var villaNumberList = _unitOfWork.VillaNumber.GetAll().ToList();
+            var bookedVillas = _unitOfWork.Booking.GetAll(x => x.Status == SD.StatusApproved || x.Status == SD.StatusCheckedIn).ToList();
+
+            int roomAvailable = SD.VillaRoomsAvailable_Count(villaId, villaNumberList, checkInDate, nights, bookedVillas);
+
+            return roomAvailable > 0;
+
         }
 
         public void UpdateVilla(Villa villa)

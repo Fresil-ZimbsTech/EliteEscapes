@@ -10,18 +10,28 @@ using Syncfusion.DocIO;
 using Syncfusion.DocIORenderer;
 using Syncfusion.Drawing;
 using Syncfusion.Pdf;
+using EliteEscapes.Application.Services.Interface;
+using Microsoft.AspNetCore.Identity;
 
 namespace EliteEscapes.Web.Controllers
 {
     public class BookingController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
+       
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IVillaService _villaService;
+        private readonly IBookingService _bookingService;
+        private readonly IVillaNumberService _villaNumberService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public BookingController(IUnitOfWork unitOfWork,IWebHostEnvironment webHostEnvironment)
+        public BookingController(IWebHostEnvironment webHostEnvironment,IVillaService villaService,IBookingService bookingService,IVillaNumberService villaNumberService,UserManager<ApplicationUser> userManager)
         {
-            _unitOfWork = unitOfWork;
+            
             _webHostEnvironment = webHostEnvironment;
+            _villaService = villaService;
+            _bookingService = bookingService;
+            _villaNumberService = villaNumberService;
+            _userManager = userManager;
         }
 
         [Authorize]
@@ -37,7 +47,7 @@ namespace EliteEscapes.Web.Controllers
             var cliamIdentity = (ClaimsIdentity)User.Identity;
             var userId = cliamIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
 
-            ApplicationUser user = _unitOfWork.User.Get(x => x.Id == userId);
+            ApplicationUser user = _userManager.FindByIdAsync(userId).GetAwaiter().GetResult();
 
             Booking booking = new()
             {
@@ -45,7 +55,7 @@ namespace EliteEscapes.Web.Controllers
                 CheckInDate = checkInDate,
                 Nights = nights,
                 CheckOutDate = checkInDate.AddDays(nights),
-                Villa = _unitOfWork.Villa.Get(x => x.Id == villaId, includeProperties: "VillaAmenity"),
+                Villa = _villaService.GetVillaById(villaId),
                 UserId = userId,
                 Phone = user.PhoneNumber,
                 Email = user.Email,
@@ -59,17 +69,13 @@ namespace EliteEscapes.Web.Controllers
         [HttpPost]
         public IActionResult FinalizeBooking(Booking booking)
         {
-            var villa = _unitOfWork.Villa.Get(x => x.Id == booking.VillaId);
+            var villa = _villaService.GetVillaById(booking.VillaId);
             booking.TotalCost = villa.Price * booking.Nights;
             booking.Status = SD.StatusPending;
             booking.BookingDate = DateTime.Now;
 
-            var villaNumberList = _unitOfWork.VillaNumber.GetAll().ToList();
-            var bookedVillas = _unitOfWork.Booking.GetAll(x => x.Status == SD.StatusApproved || x.Status == SD.StatusCheckedIn).ToList();
-                
-            int roomAvailable = SD.VillaRoomsAvailable_Count(villa.Id, villaNumberList, booking.CheckInDate, booking.Nights, bookedVillas);
-
-            if(roomAvailable == 0)
+           
+            if(!_villaService.IsVillaAvailableByDate(villa.Id,booking.Nights,booking.CheckInDate))
             {
                 TempData["Error"] = " Rooms  Has Been Sold Out!";
 
@@ -81,8 +87,7 @@ namespace EliteEscapes.Web.Controllers
                 });
             }
 
-            _unitOfWork.Booking.Add(booking);
-            _unitOfWork.Save();
+            _bookingService.CreateBooking(booking);
 
             var domain = Request.Scheme + "://" + Request.Host.Value + "/";
             var options = new SessionCreateOptions
@@ -112,8 +117,8 @@ namespace EliteEscapes.Web.Controllers
             var service = new SessionService();
             Session session = service.Create(options);
 
-            _unitOfWork.Booking.UpdateStripePaymentID(booking.Id, session.Id, session.PaymentIntentId);
-            _unitOfWork.Save();
+            _bookingService.UpdateStripePaymentID(booking.Id, session.Id, session.PaymentIntentId);
+            
 
             Response.Headers.Add("Location", session.Url);
             return new StatusCodeResult(303);
@@ -123,8 +128,7 @@ namespace EliteEscapes.Web.Controllers
         [Authorize]
         public IActionResult BookingConfirmation(int bookingId)
         {
-            Booking bookingFromDb = _unitOfWork.Booking.Get(u => u.Id == bookingId,
-                  includeProperties: "User,Villa");
+            Booking bookingFromDb = _bookingService.GetBookingById(bookingId);
 
             if (bookingFromDb.Status == SD.StatusPending)
             {
@@ -135,9 +139,9 @@ namespace EliteEscapes.Web.Controllers
 
                 if (session.PaymentStatus == "paid")
                 {
-                    _unitOfWork.Booking.UpdateStatus(bookingFromDb.Id, SD.StatusApproved,0);
-                    _unitOfWork.Booking.UpdateStripePaymentID(bookingFromDb.Id, session.Id, session.PaymentIntentId);
-                    _unitOfWork.Save();
+                    _bookingService.UpdateStatus(bookingFromDb.Id, SD.StatusApproved,0);
+                    _bookingService.UpdateStripePaymentID(bookingFromDb.Id, session.Id, session.PaymentIntentId);
+                 
                 }
             }
             return View(bookingId);
@@ -148,35 +152,32 @@ namespace EliteEscapes.Web.Controllers
         public IActionResult GetAll(string status)
         {
             IEnumerable<Booking> objBookings;
+            string userId = "";
 
-            if (User.IsInRole(SD.Role_Admin))
+            if (string.IsNullOrEmpty(status))
             {
-                objBookings = _unitOfWork.Booking.GetAll(includeProperties: "User,Villa");
+                status = "";
             }
-            else
+           if(!User.IsInRole(SD.Role_Admin))
             {
-                var claimIdentity = (ClaimsIdentity)User.Identity;
-                var userId = claimIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
-                objBookings = _unitOfWork.Booking.GetAll(x => x.UserId == userId, includeProperties: "User,Villa");
+                var claimsIdentity =(ClaimsIdentity)User.Identity;
+                userId = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier).Value;
             }
-
-            if(!string.IsNullOrEmpty(status))
-            {
-                objBookings = objBookings.Where(x => x.Status.ToLower().Equals(status.ToLower()));
-            }
+           objBookings = _bookingService.GetAllBookings(userId, status);
+           
             return Json(new { data = objBookings });
         }
 
         [Authorize]
         public IActionResult BookingDetails(int bookingId)
         {
-            Booking bookingFromDb = _unitOfWork.Booking.Get(x => x.Id == bookingId, includeProperties: "User,Villa");
+            Booking bookingFromDb = _bookingService.GetBookingById(bookingId);
 
             if(bookingFromDb.VillaNumber==0 && bookingFromDb.Status == SD.StatusApproved)
             {
                 var availableVillaNumber = AssignAvailableVillaNumberByVilla(bookingFromDb.VillaId);
 
-                bookingFromDb.VillaNumbers = _unitOfWork.VillaNumber.GetAll(u=>u.VillaId == bookingFromDb.VillaId && availableVillaNumber.Any(x=>x==u.Villa_Number)).ToList();
+                bookingFromDb.VillaNumbers = _villaNumberService.GetAllVillaNumbers().Where(u=>u.VillaId == bookingFromDb.VillaId && availableVillaNumber.Any(x=>x==u.Villa_Number)).ToList();
             }
 
 
@@ -198,8 +199,7 @@ namespace EliteEscapes.Web.Controllers
             document.Open(fileStream, FormatType.Automatic);
 
             //Update Template
-            Booking bookingFromDb = _unitOfWork.Booking.Get(u => u.Id == id,
-                            includeProperties: "User,Villa");
+            Booking bookingFromDb = _bookingService.GetBookingById(id);
 
             TextSelection textSelection = document.Find("xx_customer_name", false, true);
             WTextRange textRange = textSelection.GetAsOneRange();
@@ -320,8 +320,7 @@ namespace EliteEscapes.Web.Controllers
         [Authorize(Roles =SD.Role_Admin)]
         public IActionResult CheckIn(Booking booking)
         {
-            _unitOfWork.Booking.UpdateStatus(booking.Id, SD.StatusCheckedIn, booking.VillaNumber);
-            _unitOfWork.Save();
+            _bookingService.UpdateStatus(booking.Id, SD.StatusCheckedIn, booking.VillaNumber);
             TempData["Success"] = "Booking Updated Succesfully";
             return RedirectToAction(nameof(BookingDetails) , new {bookingId = booking.Id});
         }
@@ -330,8 +329,7 @@ namespace EliteEscapes.Web.Controllers
         [Authorize(Roles = SD.Role_Admin)]
         public IActionResult CheckOut(Booking booking)
         {
-            _unitOfWork.Booking.UpdateStatus(booking.Id, SD.StatusCompleted, booking.VillaNumber);
-            _unitOfWork.Save();
+            _bookingService.UpdateStatus(booking.Id, SD.StatusCompleted, booking.VillaNumber);
             TempData["Success"] = "Booking Completed Succesfully";
             return RedirectToAction(nameof(BookingDetails), new { bookingId = booking.Id });
         }
@@ -340,16 +338,15 @@ namespace EliteEscapes.Web.Controllers
         [Authorize(Roles = SD.Role_Admin)]
         public IActionResult CancelBooking(Booking booking)
         {
-            _unitOfWork.Booking.UpdateStatus(booking.Id, SD.StatusCancelled, 0);
-            _unitOfWork.Save();
+            _bookingService.UpdateStatus(booking.Id, SD.StatusCancelled, 0);
             TempData["Success"] = "Booking Cancelled Succesfully";
             return RedirectToAction(nameof(BookingDetails), new { bookingId = booking.Id });
         }
         private List<int> AssignAvailableVillaNumberByVilla(int villaId)
         {
             List<int> availableVillaNumbers = new();
-            var villaNumbers = _unitOfWork.VillaNumber.GetAll(x => x.VillaId == villaId);
-            var checkInVilla = _unitOfWork.Booking.GetAll(u => u.VillaId == villaId && u.Status == SD.StatusCheckedIn).Select(u => u.VillaNumber);
+            var villaNumbers = _villaNumberService.GetAllVillaNumbers().Where(x => x.VillaId == villaId);
+            var checkInVilla = _bookingService.GetCheckedInVillaNumber(villaId);
 
             foreach (var villaNumber in villaNumbers)
             {
