@@ -16,11 +16,12 @@ namespace EliteEscapes.Infrastructure.Emails
         public EmailService(IConfiguration configuration)
         {
             _sendGridKey = configuration["SendGrid:Key"];
+            Console.WriteLine($"SendGrid API Key: {_sendGridKey}");
         }
         public async Task<bool> SendEmailAsync(string email, string subject, string message)
         {
             var client = new SendGridClient(_sendGridKey);
-            var from = new EmailAddress("hello@dotnetmastery.com", "ElliteEscapes - Diya & Fresil");
+            var from = new EmailAddress("technicalfresil@gmail.com", "ElliteEscapes - Diya & Fresil");
             var to = new EmailAddress(email);
             var msg = MailHelper.CreateSingleEmail(from, to, subject, "", message);
             var response = await client.SendEmailAsync(msg);
