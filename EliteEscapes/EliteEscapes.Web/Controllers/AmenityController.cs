@@ -1,5 +1,6 @@
 ﻿using EliteEscapes.Application.Common.Interfaces;
 using EliteEscapes.Application.Common.Utility;
+using EliteEscapes.Application.Services.Interface;
 using EliteEscapes.Domain.Entities;
 using EliteEscapes.Infrastructure.Data;
 using EliteEscapes.Web.ViewModels;
@@ -13,22 +14,24 @@ namespace EliteEscapes.Web.Controllers
     [Authorize(Roles = SD.Role_Admin)]
     public class AmenityController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IAmenityService _amenityService;
+        private readonly IVillaService _villaService;
 
-        public AmenityController(IUnitOfWork unitOfWork)
+        public AmenityController(IAmenityService amenityService, IVillaService villaService)
         {
-            _unitOfWork = unitOfWork;
+            _amenityService = amenityService;
+            _villaService = villaService;
         }
         public IActionResult Index()
         {
-            var amenities = _unitOfWork.Amenity.GetAll(includeProperties: "Villa");
+            var amenities = _amenityService.GetAllAmenities();
             return View(amenities);
         }
         public IActionResult Create()
         {
             AmenityVM amenityVM = new()
             {
-                VillaList = _unitOfWork.Villa.GetAll().Select(u => new SelectListItem
+                VillaList = _villaService.GetAllVillas().Select(u => new SelectListItem
                 {
                     Text = u.Name,
                     Value = u.Id.ToString()
@@ -42,13 +45,12 @@ namespace EliteEscapes.Web.Controllers
           
             if (ModelState.IsValid )
             {
-                _unitOfWork.Amenity.Add(obj.Amenity);
-                _unitOfWork.Save();
+                _amenityService.CreateAmenity(obj.Amenity);
                 TempData["success"] = "Amenity  Created Successfully";
                 return RedirectToAction("Index");
             }
 
-            obj.VillaList = _unitOfWork.Villa.GetAll().Select(u => new SelectListItem
+            obj.VillaList = _villaService.GetAllVillas().Select(u => new SelectListItem
             {
                 Text = u.Name,
                 Value = u.Id.ToString()
@@ -60,12 +62,12 @@ namespace EliteEscapes.Web.Controllers
         {
             AmenityVM amenityVM = new()
             {
-                VillaList = _unitOfWork.Villa.GetAll().Select(u => new SelectListItem
+                VillaList = _villaService.GetAllVillas().Select(u => new SelectListItem
                 {
                     Text = u.Name,
                     Value = u.Id.ToString()
                 }),
-                Amenity = _unitOfWork.Amenity.Get(v => v.Id == amenityId)
+                Amenity = _amenityService.GetAmenityById(amenityId)
             };
             if (amenityVM.Amenity == null)
             {
@@ -79,12 +81,12 @@ namespace EliteEscapes.Web.Controllers
         {
             if (ModelState.IsValid)
             {
-                _unitOfWork.Amenity.Update(amenityVM.Amenity);
-                _unitOfWork.Save();
+                _amenityService.UpdateAmenity(amenityVM.Amenity);
+               
                 TempData["success"] = "The Amenity has been updated Successfully";
                 return RedirectToAction("Index");
             }
-            amenityVM.VillaList = _unitOfWork.Villa.GetAll().Select(u => new SelectListItem
+            amenityVM.VillaList = _villaService.GetAllVillas().Select(u => new SelectListItem
             {
                 Text = u.Name,
                 Value = u.Id.ToString()
@@ -97,12 +99,12 @@ namespace EliteEscapes.Web.Controllers
         {
             AmenityVM amenityVM = new()
             {
-                VillaList = _unitOfWork.Villa.GetAll().Select(u => new SelectListItem
+                VillaList = _villaService.GetAllVillas().Select(u => new SelectListItem
                 {
                     Text = u.Name,
                     Value = u.Id.ToString()
                 }),
-                Amenity = _unitOfWork.Amenity.Get(v => v.Id == amenityId)
+                Amenity = _amenityService.GetAmenityById(amenityId)
             };
             if (amenityVM.Amenity == null)
             {
@@ -115,15 +117,14 @@ namespace EliteEscapes.Web.Controllers
         [HttpPost]
         public IActionResult Delete(AmenityVM amenityVM)
         {
-           Amenity? del = _unitOfWork.Amenity.Get(v => v.Id == amenityVM.Amenity.Id);
-            if (del == null)
+           Amenity? objFromDb = _amenityService.GetAmenityById(amenityVM.Amenity.Id);
+            if (objFromDb == null)
             {
                 TempData["error"] = "Amenity could Not be Deleted Successfully";
                 return RedirectToAction("Error", "Home");
 
             }
-            _unitOfWork.Amenity.Remove(del);
-            _unitOfWork.Save();
+            _amenityService.DeleteAmenity(objFromDb.Id);          
             TempData["success"] = "Amenity Deleted Successfully";
             return RedirectToAction("Index");
         }
