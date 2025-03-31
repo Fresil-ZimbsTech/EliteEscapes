@@ -54,6 +54,7 @@ namespace EliteEscapes.Web.Controllers
 
             ApplicationUser user = _userManager.FindByIdAsync(userId).GetAwaiter().GetResult();
 
+
             Booking booking = new()
             {
                 VillaId = villaId,
@@ -67,6 +68,7 @@ namespace EliteEscapes.Web.Controllers
                 Name = user.Name
             };
             booking.TotalCost = booking.Villa.Price * nights;
+            
             return View(booking);
         }
 
@@ -75,11 +77,11 @@ namespace EliteEscapes.Web.Controllers
         public IActionResult FinalizeBooking(Booking booking)
         {
             var villa = _villaService.GetVillaById(booking.VillaId);
+            booking.CheckOutDate = booking.CheckInDate.AddDays(booking.Nights);
             booking.TotalCost = villa.Price * booking.Nights;
             booking.Status = SD.StatusPending;
             booking.BookingDate = DateTime.Now;
 
-           
             if(!_villaService.IsVillaAvailableByDate(villa.Id,booking.Nights,booking.CheckInDate))
             {
                 TempData["Error"] = " Rooms  Has Been Sold Out!";
