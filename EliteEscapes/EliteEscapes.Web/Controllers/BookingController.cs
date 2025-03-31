@@ -46,7 +46,7 @@ namespace EliteEscapes.Web.Controllers
         }
 
         [Authorize]
-        public IActionResult FinalizeBooking(int villaId, DateOnly checkInDate, int nights)
+        public IActionResult FinalizeBooking(int villaId, string checkInDate, int nights)
         {
 
             var cliamIdentity = (ClaimsIdentity)User.Identity;
@@ -54,13 +54,15 @@ namespace EliteEscapes.Web.Controllers
 
             ApplicationUser user = _userManager.FindByIdAsync(userId).GetAwaiter().GetResult();
 
+            DateOnly parsedCheckInDate = DateOnly.ParseExact(checkInDate, "dd/MM/yyyy");
+
 
             Booking booking = new()
             {
                 VillaId = villaId,
-                CheckInDate = checkInDate,
+                CheckInDate = parsedCheckInDate,
                 Nights = nights,
-                CheckOutDate = checkInDate.AddDays(nights),
+                CheckOutDate = parsedCheckInDate.AddDays(nights),
                 Villa = _villaService.GetVillaById(villaId),
                 UserId = userId,
                 Phone = user.PhoneNumber,
