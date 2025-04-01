@@ -32,5 +32,34 @@ namespace EliteEscapes.Infrastructure.Emails
             }
             return false;
         }
+
+        public async Task<bool> SendEmailWithAttachmentAsync(string email, string subject, string message, byte[] attachmentData, string fileName)
+        {
+            var client = new SendGridClient(_sendGridKey);
+            var from = new EmailAddress("technicalfresil@gmail.com", "ElliteEscapes - Diya & Fresil");
+            var to = new EmailAddress(email);
+            var msg = MailHelper.CreateSingleEmail(from, to, subject, "", message);
+           
+
+            if (attachmentData != null && attachmentData.Length > 0)
+            {
+                var attachment = new Attachment
+                {
+                    Content = Convert.ToBase64String(attachmentData),
+                    Filename = fileName,
+                    Type = "application/pdf",
+                    Disposition = "attachment"
+                };
+
+                msg.AddAttachment(attachment);
+            }
+            var response = await client.SendEmailAsync(msg);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Accepted || response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                return true;
+            }
+            return false;
+        }
     }
 }

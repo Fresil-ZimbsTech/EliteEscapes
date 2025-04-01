@@ -128,8 +128,18 @@ namespace EliteEscapes.Web.Controllers
                     _bookingService.UpdateStatus(bookingFromDb.Id, SD.StatusApproved,0);
                     _bookingService.UpdateStripePaymentID(bookingFromDb.Id, session.Id, session.PaymentIntentId);
 
-                    _emailService.SendEmailAsync(bookingFromDb.Email, "Booking Confirmation - ElliteEscapes", "<p>Your booking has been confirmed. Booking ID - " + bookingFromDb.Id + "</p>");
-                 
+                    // Generate Invoice PDF
+                    byte[] pdfBytes = GenerateInvoicePDF(bookingFromDb);
+
+                    // Send Email with Invoice
+                    _emailService.SendEmailWithAttachmentAsync(
+                        bookingFromDb.Email,
+                        "Booking Confirmation - EliteEscapes",
+                        "<p>Your booking has been confirmed. Please find the attached invoice.</p>",
+                        pdfBytes,
+                        "BookingInvoice.pdf"
+                    );
+
                 }
             }
             return View(bookingId);
@@ -302,6 +312,94 @@ namespace EliteEscapes.Web.Controllers
             }
            
 
+        }
+
+        private byte[] GenerateInvoicePDF(Booking booking)
+        {
+            using WordDocument document = new();
+            string basePath = _webHostEnvironment.WebRootPath;
+            string dataPath = basePath + @"/exports/BookingDetails.docx";
+
+            using FileStream fileStream = new(dataPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            document.Open(fileStream, FormatType.Automatic);
+
+            document.Replace("xx_customer_name", booking.Name, false, true);
+            document.Replace("xx_customer_phone", booking.Phone, false, true);
+            document.Replace("xx_customer_email", booking.Email, false, true);
+            document.Replace("XX_BOOKING_NUMBER", "BOOKING ID - " + booking.Id, false, true);
+            document.Replace("XX_BOOKING_DATE", "BOOKING DATE - " + booking.BookingDate.ToShortDateString(), false, true);
+            document.Replace("xx_payment_date", booking.PaymentDate.ToShortDateString(), false, true);
+            document.Replace("xx_checkin_date", booking.CheckInDate.ToShortDateString(), false, true);
+            document.Replace("xx_checkout_date", booking.CheckOutDate.ToShortDateString(), false, true);
+            document.Replace("xx_booking_total", booking.TotalCost.ToString("c"), false, true);
+
+            WTable table = new(document);
+
+            table.TableFormat.Borders.LineWidth = 1f;
+            table.TableFormat.Borders.Color = Color.Black;
+            table.TableFormat.Paddings.Top = 7f;
+            table.TableFormat.Paddings.Bottom = 7f;
+            table.TableFormat.Borders.Horizontal.LineWidth = 1f;
+
+            int rows = booking.VillaNumber > 0 ? 3 : 2;
+            table.ResetCells(rows, 4);
+
+            WTableRow row0 = table.Rows[0];
+
+            row0.Cells[0].AddParagraph().AppendText("NIGHTS");
+            row0.Cells[0].Width = 80;
+            row0.Cells[1].AddParagraph().AppendText("VILLA");
+            row0.Cells[1].Width = 220;
+            row0.Cells[2].AddParagraph().AppendText("PRICE PER NIGHT");
+            row0.Cells[3].AddParagraph().AppendText("TOTAL");
+            row0.Cells[3].Width = 80;
+
+            WTableRow row1 = table.Rows[1];
+
+            row1.Cells[0].AddParagraph().AppendText(booking.Nights.ToString());
+            row1.Cells[0].Width = 80;
+            row1.Cells[1].AddParagraph().AppendText(booking.Villa.Name);
+            row1.Cells[1].Width = 220;
+            row1.Cells[2].AddParagraph().AppendText((booking.TotalCost / booking.Nights).ToString("c"));
+            row1.Cells[3].AddParagraph().AppendText(booking.TotalCost.ToString("c"));
+            row1.Cells[3].Width = 80;
+
+            if (booking.VillaNumber > 0)
+            {
+                WTableRow row2 = table.Rows[2];
+
+                row2.Cells[0].Width = 80;
+                row2.Cells[1].AddParagraph().AppendText("Villa Number - " + booking.VillaNumber.ToString());
+                row2.Cells[1].Width = 220;
+                row2.Cells[3].Width = 80;
+            }
+
+            WTableStyle tableStyle = document.AddTableStyle("CustomStyle") as WTableStyle;
+            tableStyle.TableProperties.RowStripe = 1;
+            tableStyle.TableProperties.ColumnStripe = 2;
+            tableStyle.TableProperties.Paddings.Top = 2;
+            tableStyle.TableProperties.Paddings.Bottom = 1;
+            tableStyle.TableProperties.Paddings.Left = 5.4f;
+            tableStyle.TableProperties.Paddings.Right = 5.4f;
+
+            ConditionalFormattingStyle firstRowStyle = tableStyle.ConditionalFormattingStyles.Add(ConditionalFormattingType.FirstRow);
+            firstRowStyle.CharacterFormat.Bold = true;
+            firstRowStyle.CharacterFormat.TextColor = Color.FromArgb(255, 255, 255, 255);
+            firstRowStyle.CellProperties.BackColor = Color.Black;
+
+            table.ApplyStyle("CustomStyle");
+
+            TextBodyPart bodyPart = new(document);
+            bodyPart.BodyItems.Add(table);
+
+            document.Replace("<ADDTABLEHERE>", bodyPart, false, false);
+
+            using DocIORenderer renderer = new();
+            using PdfDocument pdfDocument = renderer.ConvertToPDF(document);
+
+            using MemoryStream stream = new();
+            pdfDocument.Save(stream);
+            return stream.ToArray();
         }
 
         [HttpPost]
