@@ -112,8 +112,7 @@ namespace EliteEscapes.Application.Services.Implementation
         }
         public async Task<RadialBarChartDto> GetRevenueChartData()
         {
-            var totalBookings = _unitOfWork.Booking.GetAll(u => u.Status != SD.StatusPending
-           || u.Status == SD.StatusCancelled);
+            var totalBookings = _unitOfWork.Booking.GetAll(u => u.Status ==SD.StatusApproved || u.Status == SD.StatusCheckedIn || u.Status == SD.StatusCompleted);
 
             var totalRevenue = Convert.ToInt32(totalBookings.Sum(u => u.TotalCost));
 
