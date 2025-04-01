@@ -142,7 +142,7 @@ namespace EliteEscapes.Web.Controllers
 
                 }
             }
-            return View(bookingId);
+            return View(bookingFromDb);
         }
 
         [HttpGet]
