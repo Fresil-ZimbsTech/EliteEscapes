@@ -73,7 +73,8 @@ EliteEscapes is a villa and resort booking platform designed for vacation rental
   - Check-in and check-out customers.
   - Send automated emails and generate invoices.
 
-##Contributing
+
+## Contributing
 Feel free to fork the repository and submit pull requests for improvements or bug fixes.
 
 
