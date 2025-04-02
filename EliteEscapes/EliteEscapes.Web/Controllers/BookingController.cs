@@ -112,6 +112,36 @@ namespace EliteEscapes.Web.Controllers
         }
 
         [Authorize]
+        [HttpPost]
+        public IActionResult RetryPayment(int bookingId)
+        {
+            var booking = _bookingService.GetBookingById(bookingId);
+            if (booking == null)
+            {
+                return NotFound("Booking not found.");
+            }
+
+            var villa = _villaService.GetVillaById(booking.VillaId);
+            if (villa == null)
+            {
+                return NotFound("Villa not found.");
+            }
+
+            var domain = Request.Scheme + "://" + Request.Host.Value + "/";
+
+            var options = _paymentService.CreateStripeSessionOptions(booking, villa, domain);
+
+            var session = _paymentService.CreateStripeSession(options);
+
+            // Update booking with new Stripe session details
+            _bookingService.UpdateStripePaymentID(booking.Id, session.Id, session.PaymentIntentId);
+
+            Response.Headers.Add("Location", session.Url);
+            return new StatusCodeResult(303); // Redirect to Stripe Payment Gateway
+        }
+
+
+        [Authorize]
         public IActionResult BookingConfirmation(int bookingId)
         {
             Booking bookingFromDb = _bookingService.GetBookingById(bookingId);
