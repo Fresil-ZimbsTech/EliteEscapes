@@ -20,7 +20,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<ApplicationDbContext>();
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders(); // ? <-- Fixes token generation for reset password
+
 
 //COOKIE CONFIGURATION 
 builder.Services.ConfigureApplicationCookie(option =>
